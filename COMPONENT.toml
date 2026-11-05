@@ -1,0 +1,16 @@
+[component]
+name = "SigmaOS-betteroffice-spreadsheets"
+tier = 3
+stability = "scaffold"
+language = "rust"
+description = "BetterOffice spreadsheet engine — formulas, pivot tables, charts, and ODS/XLSX compatibility"
+upstream = []
+
+[contract]
+provides = ["spreadsheet-engine", "formula-evaluation"]
+depends_on = []
+
+[maturity]
+status = "Scaffold"
+test_evidence = "Compiles"
+next_milestone = "Verification test suite"

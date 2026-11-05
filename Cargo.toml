@@ -1,0 +1,9 @@
+[package]
+name = "sigmaos_betteroffice_spreadsheets"
+version = "0.1.0"
+edition = "2021"
+description = "BetterOffice spreadsheet engine — formulas, pivot tables, charts, and ODS/XLSX compatibility"
+
+[lib]
+name = "sigmaos_betteroffice_spreadsheets"
+path = "src/lib.rs"
