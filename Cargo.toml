@@ -2,7 +2,8 @@
 name = "sigmaos_betteroffice_spreadsheets"
 version = "0.1.0"
 edition = "2021"
-description = "BetterOffice spreadsheet engine — formulas, pivot tables, charts, and ODS/XLSX compatibility"
+license = "MIT"
+description = "SigmaOS betteroffice-spreadsheets component inspired by Linux Mint / Omarchy / Arch Linux."
 
 [lib]
 name = "sigmaos_betteroffice_spreadsheets"
