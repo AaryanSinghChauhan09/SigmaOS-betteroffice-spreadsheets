@@ -25,7 +25,10 @@ pub struct CellRef {
 
 impl CellRef {
     pub fn new(column: impl Into<String>, row: u32) -> Self {
-        Self { column: column.into(), row }
+        Self {
+            column: column.into(),
+            row,
+        }
     }
 }
 
@@ -83,7 +86,9 @@ impl Sheet {
         self.cells.get(&format!("{}{}", column, row))
     }
 
-    pub fn cell_count(&self) -> usize { self.cells.len() }
+    pub fn cell_count(&self) -> usize {
+        self.cells.len()
+    }
 }
 
 /// Spreadsheet workbook.
@@ -100,11 +105,17 @@ impl Workbook {
         }
     }
 
-    pub fn add_sheet(&mut self, sheet: Sheet) { self.sheets.insert(sheet.name.clone(), sheet); }
+    pub fn add_sheet(&mut self, sheet: Sheet) {
+        self.sheets.insert(sheet.name.clone(), sheet);
+    }
 
-    pub fn sheet_count(&self) -> usize { self.sheets.len() }
+    pub fn sheet_count(&self) -> usize {
+        self.sheets.len()
+    }
 
-    pub fn get_sheet(&self, name: &str) -> Option<&Sheet> { self.sheets.get(name) }
+    pub fn get_sheet(&self, name: &str) -> Option<&Sheet> {
+        self.sheets.get(name)
+    }
 }
 
 #[cfg(test)]

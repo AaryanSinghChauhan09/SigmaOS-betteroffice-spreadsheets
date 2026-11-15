@@ -1,4 +1,4 @@
-use sigmaos_betteroffice_spreadsheets::{Workbook, Sheet, Cell, CellRef, CellValue};
+use sigmaos_betteroffice_spreadsheets::{Sheet, Workbook};
 
 #[test]
 fn workbook_integration_aaa() {
