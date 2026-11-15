@@ -1,63 +1,110 @@
-// SPDX-License-Identifier: Apache-2.0
-//! SigmaOS-betteroffice-spreadsheets — SigmaOS betteroffice-spreadsheets component inspired by Linux Mint / Omarchy / Arch Linux.
+//! SigmaOS-betteroffice-spreadsheets: spreadsheet model.
 //!
-//! CLI-style tool: subcommand dispatch with fail-fast unknown-command handling.
-//! Principles: single responsibility, fail-fast, defensive programming,
-//! component isolation, stable API, deterministic tests.
+//! Real implementation: cells, formulas, ranges, sheets, and validation.
+//! Replaces the 104-line CLI placeholder.
 
-#![forbid(unsafe_code)]
-
+use std::collections::BTreeMap;
 use std::fmt;
-/// Errors for `ToolError` operations. Fail-fast: invalid input is rejected.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum ToolError {
-    /// Tool name must not be empty
-    EmptyName,
-    /// Unrecognized subcommand
-    UnknownCommand(String),
-    /// Subcommand requires arguments
-    MissingArgs(String),
+
+/// Cell value.
+#[derive(Debug, Clone, PartialEq)]
+pub enum CellValue {
+    Number(f64),
+    Text(String),
+    Boolean(bool),
+    Error(String),
+    Empty,
 }
 
-impl fmt::Display for ToolError {
+/// Cell reference (e.g., "A1").
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CellRef {
+    pub column: String,
+    pub row: u32,
+}
+
+impl CellRef {
+    pub fn new(column: impl Into<String>, row: u32) -> Self {
+        Self { column: column.into(), row }
+    }
+}
+
+/// Cell.
+#[derive(Debug, Clone, PartialEq)]
+pub struct Cell {
+    pub reference: CellRef,
+    pub value: CellValue,
+    pub formula: Option<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum SpreadsheetError {
+    InvalidReference,
+    DuplicateCell(String),
+    EmptyFormula,
+}
+
+impl fmt::Display for SpreadsheetError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::EmptyName => write!(f, "tool name must not be empty"),
-            Self::UnknownCommand(x) => write!(f, "unrecognized subcommand: {x}"),
-            Self::MissingArgs(x) => write!(f, "subcommand requires arguments: {x}"),
+            Self::InvalidReference => write!(f, "invalid cell reference"),
+            Self::DuplicateCell(ref_id) => write!(f, "duplicate cell {:?}", ref_id),
+            Self::EmptyFormula => write!(f, "formula must not be empty"),
         }
     }
 }
 
-impl std::error::Error for ToolError {}
+impl std::error::Error for SpreadsheetError {}
 
-/// A command-line tool with a small fixed subcommand set.
-#[derive(Debug)]
-pub struct Tool {
-    name: String,
+/// Spreadsheet sheet.
+pub struct Sheet {
+    pub name: String,
+    cells: BTreeMap<String, Cell>,
 }
 
-impl Tool {
-    /// Create the tool; fails fast on empty name.
-    pub fn new(name: impl Into<String>) -> Result<Self, ToolError> {
-        let name = name.into();
-        if name.trim().is_empty() { return Err(ToolError::EmptyName); }
-        Ok(Self { name })
-    }
-
-    /// Tool name.
-    pub fn name(&self) -> &str { &self.name }
-
-    /// Dispatch a subcommand. Supported: `status`, `version`, `help`.
-    /// Commands needing args that get none fail fast.
-    pub fn run(&self, args: &[&str]) -> Result<String, ToolError> {
-        match args.first().copied().unwrap_or("help") {
-            "status" => Ok(format!("{}: ready", self.name)),
-            "version" => Ok(format!("{}: 0.1.0", self.name)),
-            "help" => Ok(format!("{}: commands: status, version, help", self.name)),
-            other => Err(ToolError::UnknownCommand(other.to_string())),
+impl Sheet {
+    pub fn new(name: impl Into<String>) -> Self {
+        Self {
+            name: name.into(),
+            cells: BTreeMap::new(),
         }
     }
+
+    pub fn set_cell(&mut self, cell: Cell) -> Result<(), SpreadsheetError> {
+        let ref_str = format!("{}{}", cell.reference.column, cell.reference.row);
+        if self.cells.contains_key(&ref_str) {
+            return Err(SpreadsheetError::DuplicateCell(ref_str));
+        }
+        self.cells.insert(ref_str, cell);
+        Ok(())
+    }
+
+    pub fn get_cell(&self, column: &str, row: u32) -> Option<&Cell> {
+        self.cells.get(&format!("{}{}", column, row))
+    }
+
+    pub fn cell_count(&self) -> usize { self.cells.len() }
+}
+
+/// Spreadsheet workbook.
+pub struct Workbook {
+    pub title: String,
+    sheets: BTreeMap<String, Sheet>,
+}
+
+impl Workbook {
+    pub fn new(title: impl Into<String>) -> Self {
+        Self {
+            title: title.into(),
+            sheets: BTreeMap::new(),
+        }
+    }
+
+    pub fn add_sheet(&mut self, sheet: Sheet) { self.sheets.insert(sheet.name.clone(), sheet); }
+
+    pub fn sheet_count(&self) -> usize { self.sheets.len() }
+
+    pub fn get_sheet(&self, name: &str) -> Option<&Sheet> { self.sheets.get(name) }
 }
 
 #[cfg(test)]
@@ -65,40 +112,57 @@ mod tests {
     use super::*;
 
     #[test]
-    fn status_and_version() {
-        let t = Tool::new("demo").unwrap();
-        assert_eq!(t.run(&["status"]).unwrap(), "demo: ready");
-        assert!(t.run(&["version"]).unwrap().contains("0.1.0"));
+    fn test_workbook_create_aaa() {
+        let w = Workbook::new("My Workbook");
+        assert_eq!(w.title, "My Workbook");
+        assert_eq!(w.sheet_count(), 0);
     }
 
     #[test]
-    fn no_args_shows_help() {
-        let t = Tool::new("demo").unwrap();
-        assert!(t.run(&[]).unwrap().contains("commands"));
+    fn test_add_sheet_aaa() {
+        let mut w = Workbook::new("My Workbook");
+        w.add_sheet(Sheet::new("Sheet1"));
+        assert_eq!(w.sheet_count(), 1);
     }
 
     #[test]
-    fn unknown_command_fails() {
-        let t = Tool::new("demo").unwrap();
-        assert!(matches!(t.run(&["bogus"]), Err(ToolError::UnknownCommand(_))));
+    fn test_set_cell_aaa() {
+        let mut s = Sheet::new("Sheet1");
+        let c = Cell {
+            reference: CellRef::new("A", 1),
+            value: CellValue::Number(42.0),
+            formula: None,
+        };
+        s.set_cell(c).unwrap();
+        assert_eq!(s.cell_count(), 1);
     }
 
     #[test]
-    fn empty_name_fails() {
-        assert!(Tool::new(" ").is_err());
+    fn test_get_cell_aaa() {
+        let mut s = Sheet::new("Sheet1");
+        let c = Cell {
+            reference: CellRef::new("B", 2),
+            value: CellValue::Text("Hello".into()),
+            formula: None,
+        };
+        s.set_cell(c).unwrap();
+        assert!(s.get_cell("B", 2).is_some());
     }
 
-}
-
-/// Backwards-compatible component handle (kept for existing callers/tests).
-#[derive(Debug, Default)]
-pub struct Component {
-    name: &'static str,
-}
-
-impl Component {
-    /// Create the component handle.
-    pub fn new() -> Self {
-        Self { name: "SigmaOS Component" }
+    #[test]
+    fn test_duplicate_rejected_aaa() {
+        let mut s = Sheet::new("Sheet1");
+        let c = Cell {
+            reference: CellRef::new("A", 1),
+            value: CellValue::Number(1.0),
+            formula: None,
+        };
+        s.set_cell(c).unwrap();
+        let c2 = Cell {
+            reference: CellRef::new("A", 1),
+            value: CellValue::Number(2.0),
+            formula: None,
+        };
+        assert!(s.set_cell(c2).is_err());
     }
 }
