@@ -3,7 +3,7 @@ name = "SigmaOS-betteroffice-spreadsheets"
 tier = 3
 stability = "scaffold"
 language = "rust"
-description = "BetterOffice spreadsheet engine — formulas, pivot tables, charts, and ODS/XLSX compatibility"
+description = "No GitHub description is set; component scope remains unclassified."
 upstream = []
 
 [contract]
